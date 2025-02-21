@@ -82,7 +82,7 @@ Middleware corsMiddleware = (innerHandler) {
 
     return response.change(headers: {
       "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Header": "*"
+      "Access-Control-Allow-Headers": "*"
     });
   };
 };
