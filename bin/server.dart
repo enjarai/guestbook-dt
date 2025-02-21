@@ -76,7 +76,9 @@ Future<Response> _deletePost(Request request) async {
 
 Middleware corsMiddleware = (innerHandler) {
   return (request) async {
-    final response = await innerHandler(request);
+    final response = request.method == "OPTIONS" ? 
+      Response.ok("") : 
+      await innerHandler(request);
 
     return response.change(headers: {
       "access-control-allow-origin": "*"
