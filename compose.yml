@@ -1,0 +1,37 @@
+services:
+  guestbook:
+    build:
+      dockerfile: Dockerfile
+      context: .
+    ports:
+      - 8080:8080
+    environment:
+      DB_HOST: guestbook_db
+      DB_USER: guestbook
+      DB_PASS: woahanothersupersecurepassword!
+      DB_DB: guestbook
+      PORT: 8080
+      MOD_PASSWORD: meowmeowcolonthree
+    networks:
+      - guestbook_network
+    depends_on:
+      - guestbook_db
+
+  guestbook_db:
+    image: mariadb:11.7
+    hostname: guestbook_db
+    environment:
+      MYSQL_ROOT_PASSWORD: omgthisissuchasecurepasswordthatscrazytbh
+      MYSQL_USER: guestbook
+      MYSQL_PASSWORD: woahanothersupersecurepassword!
+      MYSQL_DATABASE: guestbook
+    volumes:
+      - guestbook_data:/var/lib/mysql
+    networks:
+      - guestbook_network
+
+volumes:
+  guestbook_data:
+
+networks:
+  guestbook_network:
