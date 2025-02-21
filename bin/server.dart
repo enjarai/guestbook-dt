@@ -74,6 +74,16 @@ Future<Response> _deletePost(Request request) async {
   }
 }
 
+Middleware corsMiddleware = (innerHandler) {
+  return (request) async {
+    final response = await innerHandler(request);
+
+    return response.change(headers: {
+      "access-control-allow-origin": "*"
+    });
+  };
+};
+
 void main(List<String> args) async {
   dataSource = await MariaDbDataSource.create();
 
@@ -82,7 +92,10 @@ void main(List<String> args) async {
 
   // Configure a pipeline that logs requests.
   final handler =
-      Pipeline().addMiddleware(logRequests()).addHandler(_router.call);
+      Pipeline()
+        .addMiddleware(logRequests())
+        .addMiddleware(corsMiddleware)
+        .addHandler(_router.call);
 
   // For running in containers, we respect the PORT environment variable.
   final port = int.parse(Platform.environment['PORT'] ?? '8080');
