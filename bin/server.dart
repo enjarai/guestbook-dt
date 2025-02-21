@@ -27,6 +27,10 @@ Future<Response> _createPost(Request request) async {
   final json = jsonDecode(await request.readAsString());
   final newPost = Post.createEndec.decode(SerializationContext(), JsonDeserializer(json));
 
+  if (newPost.name.isEmpty || newPost.message.isEmpty) {
+    return Response.badRequest();
+  }
+
   try {
     if (await dataSource.postPost(newPost)) {
       return Response.ok('Ok!\n');
