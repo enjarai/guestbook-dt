@@ -83,7 +83,7 @@ class MariaDbDataSource implements DataSource {
   Post toPost(ResultSetRow post) {
     return Post(
       post.typedColByName<String>("id")!,
-      post.typedColByName<DateTime>("createdAt")!,
+      DateTime.parse(post.typedColByName<String>("createdAt")!).toUtc(),
       post.typedColByName<String>("name")!,
       post.typedColByName<String>("website")!,
       post.typedColByName<String>("message")!
@@ -101,11 +101,12 @@ class MariaDbDataSource implements DataSource {
 
   @override
   Future<bool> postPost(Post post) async {
+    print(post.createdAt.toIso8601String());
     final result = await pool.execute("""
       INSERT INTO posts (id, createdAt, name, website, message) VALUES (:id, :createdAt, :name, :website, :message)
     """, {
       "id": post.id, 
-      "createdAt": post.createdAt, 
+      "createdAt": post.createdAt.toLocal(), 
       "name": post.name, 
       "website": post.website, 
       "message": post.message
