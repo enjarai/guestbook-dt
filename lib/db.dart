@@ -59,6 +59,7 @@ class MariaDbDataSource implements DataSource {
           databaseName: Platform.environment["DB_DB"],
           maxConnections: 4
         );
+        await pool.execute("SELECT 1");
         break;
       } catch (e) {
         print(e);
@@ -66,7 +67,7 @@ class MariaDbDataSource implements DataSource {
       }
     }
 
-    pool.execute("""
+    await pool.execute("""
       CREATE TABLE IF NOT EXISTS posts (
         id UUID PRIMARY KEY,
         createdAt DATETIME NOT NULL,
