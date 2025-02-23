@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:endec/endec.dart';
-import 'package:mysql1/mysql1.dart';
+import 'package:mysql_client/mysql_client.dart';
 import 'package:uuid/uuid.dart';
 
 Endec<DateTime> dateTimeEndec = Endec.string.xmap(DateTime.parse, (d) => d.toIso8601String());
@@ -43,21 +43,22 @@ abstract interface class DataSource {
 }
 
 class MariaDbDataSource implements DataSource {
-  final MySqlConnection conn;
+  final MySQLConnectionPool pool;
 
-  MariaDbDataSource(this.conn);
+  MariaDbDataSource(this.pool);
 
   static Future<MariaDbDataSource> create() async {
-    MySqlConnection conn;
+    MySQLConnectionPool pool;
     while (true) {
       try {
-        conn = await MySqlConnection.connect(ConnectionSettings(
+        pool = MySQLConnectionPool(
           host: Platform.environment["DB_HOST"] ?? "localhost",
           port: int.parse(Platform.environment["DB_PORT"] ?? "3306"),
-          user: Platform.environment["DB_USER"],
+          userName: Platform.environment["DB_USER"] ?? "root",
           password: Platform.environment["DB_PASS"],
-          db: Platform.environment["DB_DB"]
-        ));
+          databaseName: Platform.environment["DB_DB"],
+          maxConnections: 4
+        );
         break;
       } catch (e) {
         print(e);
@@ -65,7 +66,7 @@ class MariaDbDataSource implements DataSource {
       }
     }
 
-    conn.query("""
+    pool.execute("""
       CREATE TABLE IF NOT EXISTS posts (
         id UUID PRIMARY KEY,
         createdAt DATETIME NOT NULL,
@@ -75,43 +76,49 @@ class MariaDbDataSource implements DataSource {
       )
     """);
 
-    return MariaDbDataSource(conn);
+    return MariaDbDataSource(pool);
   }
 
-  Post toPost(ResultRow post) {
+  Post toPost(ResultSetRow post) {
     return Post(
-      post["id"] as String,
-      post["createdAt"] as DateTime,
-      post["name"] as String,
-      post["website"] as String,
-      (post["message"] as Blob).toString()
+      post.typedColByName<String>("id")!,
+      post.typedColByName<DateTime>("createdAt")!,
+      post.typedColByName<String>("name")!,
+      post.typedColByName<String>("website")!,
+      post.typedColByName<String>("message")!
     );
   }
 
   @override
   Future<List<Post>> getAll() async {
-    final result = await conn.query("""
+    final result = await pool.execute("""
       SELECT * FROM posts
     """);
 
-    return result.map(toPost).toList();
+    return result.rows.map(toPost).toList();
   }
 
   @override
   Future<bool> postPost(Post post) async {
-    final result = await conn.query("""
-      INSERT INTO posts (id, createdAt, name, website, message) VALUES (?, ?, ?, ?, ?)
-    """, [post.id, post.createdAt, post.name, post.website, post.message]);
+    final result = await pool.execute("""
+      INSERT INTO posts (id, createdAt, name, website, message) VALUES (:id, :createdAt, :name, :website, :message)
+    """, {
+      "id": post.id, 
+      "createdAt": post.createdAt, 
+      "name": post.name, 
+      "website": post.website, 
+      "message": post.message
+    });
 
-    return (result.affectedRows ?? 0) > 0;
+    return result.affectedRows > BigInt.from(0);
   }
 
   @override
   Future<bool> deletePost(String uuid) async {
-    final result = await conn.query("""
-      DELETE FROM posts WHERE id = ?
-    """, [uuid]);
+    final result = await pool.execute("""
+      DELETE FROM posts WHERE id = :id
+    """, {"id": uuid});
 
-    return (result.affectedRows ?? 0) > 0;
+    return result.affectedRows > BigInt.from(0);
   }
 }
